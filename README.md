@@ -72,13 +72,13 @@ Run scripts in numeric order. Set your working directory to the repository root.
 * **Baseline:** calibrated ESBL transmission dynamics
 * **Counterfactual:** theoretical **No-Resistance** scenario
 
-**Outputs:** Incremental burden estimates (e.g., net attributable mortality/morbidity) and summary visualizations.
+**Outputs:** Incremental burden estimates (e.g., net attributable mortality) and summary visualizations.
 
 ### 3) One-Way Sensitivity Analysis (OWSA)
 
 **File:** `scripts/03_sensitivity_owsa.R`
 
-**What it does:** Performs a tornado-style pre-scan to identify influential parameters, then sweeps key parameters (e.g., ±50%) to visualize outcome elasticity.
+**What it does:** Performs a tornado-style pre-scan to identify influential parameters, then sweeps key parameters (e.g., ±10%) to visualize outcome elasticity.
 
 **Outputs:** Spider plots for key outcomes (e.g., hospital deaths, community cases).
 
@@ -92,7 +92,7 @@ Run scripts in numeric order. Set your working directory to the repository root.
 
 ## Data Availability
 
-* **Surveillance data:** Aggregate hospital incidence data used for calibration is embedded directly in `scripts/01_calibration.R` for reproducibility. No individual patient-level data is included.
+* **Surveillance data:** Aggregate hospital incidence data used for calibration are embedded directly in `scripts/01_calibration.R` for reproducibility. No individual patient-level data is included.
 * **Demographics:** Birth, death, and migration parameters come from publicly available national statistics (see manuscript for details).
 
 ## Contact

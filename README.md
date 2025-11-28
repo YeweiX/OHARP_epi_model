@@ -2,7 +2,7 @@
 
 This repository contains source code to reproduce a mathematical modelling analysis of Extended-Spectrum Beta-Lactamase (ESBL)-producing Enterobacteriaceae transmission dynamics and burden estimation.
 
-The analysis uses a dynamic compartmental ODE model to calibrate transmission parameters to longitudinal surveillance data using Bayesian inference (HMC via Stan), estimate burden via counterfactual simulations (Baseline versus No-Resistance), and assess uncertainty using both one-way sensitivity analysis (OWSA) and global sensitivity analysis (LHS-PRCC).
+The analysis uses a dynamic compartmental ODE model to calibrate transmission parameters to longitudinal surveillance data using Bayesian inference (Hamiltonian Monte Carlo via Stan), estimate burden via counterfactual simulations (Baseline versus No-Resistance), and assess uncertainty using both one-way sensitivity analysis and global sensitivity analysis (Latin Hypercube Sampling-Partial Rank Correlation Coefficient, LHS-PRCC).
 
 ## Repository Structure
 

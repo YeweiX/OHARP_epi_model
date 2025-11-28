@@ -1,69 +1,100 @@
-ESBL Transmission Dynamics and Burden Model
-Authors: Yewei Xie
-Affiliation: Duke-NUS Medical School
-Date: November 2025
+## Overview
 
-Overview
-This repository contains the R and Stan code used to simulate the transmission dynamics of Extended-Spectrum Beta-Lactamase (ESBL) producing Enterobacteriaceae. The analysis is performed using a compartmental ODE model calibrated to longitudinal surveillance data.
-The repository allows reviewers to reproduce:
-Bayesian Calibration: Fitting the model to observed incidence data.
-Scenario Analysis: Estimating the burden of resistance via counterfactual simulations.
-Sensitivity Analysis: Assessing parameter uncertainty using One-Way (OWSA) and Global (PRCC) methods.
-Repository Structure
-The scripts are numbered to indicate the order of execution.
-code
-Text
+This repository contains source code to reproduce a mathematical modelling analysis of Extended-Spectrum Beta-Lactamase (ESBL)-producing Enterobacteriaceae transmission dynamics and burden estimation.
+
+The analysis uses a dynamic compartmental ODE model to calibrate transmission parameters to longitudinal surveillance data using Bayesian inference (HMC via Stan), estimate burden via counterfactual simulations (Baseline versus No-Resistance), and assess uncertainty using both one-way sensitivity analysis (OWSA) and global sensitivity analysis (LHS-PRCC).
+
+## Repository Structure
+
+Scripts are numbered in the intended execution order.
+
+```text
 .
 ├── model/
-│   └── esbl_model.stan             # Stan model file (Bayesian ODE system)
+│   └── esbl_model.stan             # Stan model file (ODE system & likelihood)
 ├── scripts/
-│   ├── 01_calibration.R            # Main calibration script (runs MCMC)
-│   ├── 02_burden_analysis.R        # Counterfactual analysis (Baseline vs. No-Resistance)
-│   ├── 03_sensitivity_owsa.R       # One-Way Sensitivity Analysis (Parameter sweeps)
-│   └── 04_sensitivity_prcc.R       # Global Sensitivity Analysis (LHS-PRCC)
-├── outputs/                        # Directory for saved model objects and plots
+│   ├── 01_calibration.R            # Model calibration (MCMC sampling)
+│   ├── 02_burden_analysis.R        # Counterfactual burden analysis
+│   ├── 03_sensitivity_owsa.R       # One-way sensitivity analysis (spider plots)
+│   └── 04_sensitivity_prcc.R       # Global sensitivity analysis (LHS-PRCC heatmap)
+├── outputs/                        # Saved model objects (.RData) and derived outputs
 └── README.md                       # This file
-System Requirements
-Software
-R (v4.0.0 or higher)
-RStudio (Recommended)
-C++ Compiler (Required for rstan):
-Windows: Rtools (version matching your R installation).
-macOS: Xcode Command Line Tools.
-Linux: g++ or clang++.
-Required Packages
-Run the following R command to install the necessary dependencies:
-code
-R
-install.packages(c("deSolve", "rstan", "dplyr", "tidyr", "ggplot2", 
-                   "patchwork", "scales", "lhs", "sensitivity", 
-                   "doParallel", "foreach", "gridExtra"))
-Note: For rstan, ensure your C++ toolchain is correctly configured.
-Instructions for Reproduction
-To reproduce the model results, please execute the scripts in the following sequence. Ensure your working directory is set to the root of this repository.
-1. Model Calibration
-Script: scripts/01_calibration.R
-Action: This script compiles the Stan model, loads the surveillance data, and performs Hamiltonian Monte Carlo (HMC) sampling.
-Output:
-Saves the fitted model object (posterior samples) to outputs/fit_esbl_results.RData.
-Generates diagnostic trace plots and posterior predictive checks.
-Note: This step is computationally intensive and may take 30–60 minutes depending on hardware.
-2. Burden Estimation (Counterfactuals)
-Script: scripts/02_burden_analysis.R
-Prerequisite: Requires fit_esbl_results.RData generated in Step 1.
-Action: Simulates two parallel scenarios (Baseline vs. No-Resistance) over a 10-year horizon using the posterior parameter sets. It calculates the incremental mortality and morbidity attributable to resistance.
-Output: Generates time-series plots of averted deaths and summary statistics for hospital and community settings.
-3. One-Way Sensitivity Analysis
-Script: scripts/03_sensitivity_owsa.R
-Action: Identifies the top influential parameters via a pre-scan (Tornado method) and performs a detailed parameter sweep (+/- 50%) for the most influential parameters.
-Output: Generates spider plots showing the impact of individual parameter variations on cumulative outcomes.
-4. Global Sensitivity Analysis (LHS-PRCC)
-Script: scripts/04_sensitivity_prcc.R
-Action: Performs Latin Hypercube Sampling (LHS) to generate 1,000 parameter sets, runs parallel simulations, and calculates Partial Rank Correlation Coefficients (PRCC).
-Output: Generates a heatmap visualizing the correlation between biological parameters and key model outcomes (cumulative infections and deaths).
-Data Availability
-Surveillance Data: Aggregate incidence data used for calibration is hardcoded within 01_calibration.R to ensure immediate reproducibility. No individual patient-level data is included.
-Demographics: Parameters for birth, death, and migration rates are derived from publicly available national statistics (sources cited in the manuscript).
-Contact
-For technical queries regarding code execution, please contact:
-yewei.xie@u.duke.nus.edu
+````
+
+## System Requirements
+
+### Software
+
+* **R** (>= 4.0.0 recommended)
+* **RStudio** (optional, recommended)
+* **C++ toolchain** (required to compile Stan models):
+
+  * **Windows:** Rtools (matching your R version)
+  * **macOS:** Xcode Command Line Tools
+
+
+### R Dependencies
+
+Install required packages:
+
+```r
+install.packages(c(
+  "deSolve", "rstan", "dplyr", "tidyr", "ggplot2",
+  "patchwork", "scales", "lhs", "sensitivity",
+  "doParallel", "foreach", "gridExtra"
+))
+```
+
+> Note: Ensure `rstan` is correctly configured with your C++ compiler before running `scripts/01_calibration.R`.
+
+## Reproduction Workflow
+
+Run scripts in numeric order. Set your working directory to the repository root.
+
+### 1) Model Calibration
+
+**File:** `scripts/01_calibration.R`
+
+**What it does:** Compiles the Stan model, loads aggregate surveillance data, and runs Hamiltonian Monte Carlo (HMC) to estimate posterior parameter distributions.
+
+**Outputs:**
+
+* Saves fitted model object to `outputs/fit_esbl_results.RData`
+* Generates diagnostic plots (trace plots, posterior predictive checks)
+
+### 2) Burden Estimation (Counterfactuals)
+
+**File:** `scripts/02_burden_analysis.R`
+**Prerequisite:** Requires `outputs/fit_esbl_results.RData` from Step 1.
+
+**What it does:** Uses posterior samples to simulate two scenarios over a 10-year horizon:
+
+* **Baseline:** calibrated ESBL transmission dynamics
+* **Counterfactual:** theoretical **No-Resistance** scenario
+
+**Outputs:** Incremental burden estimates (e.g., net attributable mortality/morbidity) and summary visualizations.
+
+### 3) One-Way Sensitivity Analysis (OWSA)
+
+**File:** `scripts/03_sensitivity_owsa.R`
+
+**What it does:** Performs a tornado-style pre-scan to identify influential parameters, then sweeps key parameters (e.g., ±50%) to visualize outcome elasticity.
+
+**Outputs:** Spider plots for key outcomes (e.g., hospital deaths, community cases).
+
+### 4) Global Sensitivity Analysis (LHS-PRCC)
+
+**File:** `scripts/04_sensitivity_prcc.R`
+
+**What it does:** Generates parameter sets using Latin Hypercube Sampling (e.g., 1,000 draws) and computes Partial Rank Correlation Coefficients (PRCC), using parallel simulation where configured.
+
+**Outputs:** Heatmap ranking correlations between input parameters and cumulative 10-year outcomes.
+
+## Data Availability
+
+* **Surveillance data:** Aggregate hospital incidence data used for calibration is embedded directly in `scripts/01_calibration.R` for reproducibility. No individual patient-level data is included.
+* **Demographics:** Birth, death, and migration parameters come from publicly available national statistics (see manuscript for details).
+
+## Contact
+For technical questions about the code or reproducibility, please contact the corresponding author listed in the manuscript.
+

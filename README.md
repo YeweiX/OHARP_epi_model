@@ -1,77 +1,69 @@
-# OHARP_epi_model
-Epidemiological Modeling of ESBL Infection Burden
-This project contains R scripts to model the burden of Extended-Spectrum Beta-Lactamase (ESBL) producing bacterial infections, including model generation, posterior checks, scenario analysis, and sensitivity analyses.
+ESBL Transmission Dynamics and Burden Model
+Authors: Yewei Xie
+Affiliation: Duke-NUS Medical School
+Date: November 2025
 
-Project Structure
-The project is organized into several R scripts, each responsible for a specific part of the analysis pipeline. The core of the modeling is performed using Stan for MCMC simulation.
-
-File Descriptions
-stancode_opencohort_norisk_4.stan: The Stan code defining the statistical model.
-
-model_mcmc_0906.R: R script to run the MCMC simulation using the Stan model to generate model parameters.
-
-modelposterior.R: R script for conducting posterior predictive checks to evaluate the model fit.
-
-epi_scenario0708_v2.R: R script to calculate and generate the baseline epidemiological burden based on the model outputs.
-
-epi_scenario_overall_0829.R: R script to calculate the incremental burden of ESBL infections under different scenarios.
-
-osa_epi_0724.R: R script to perform a one-way sensitivity analysis (OSA) on the epidemiological model.
-
-fig5.R: R script used to generate plots for the one-way sensitivity analysis results.
-
-prcc_0704_v2.R: R script to perform a Partial Rank Correlation Coefficient (PRCC) analysis and generate corresponding plots.
-
-How to Run the Analysis
-Follow these steps in order to reproduce the analysis.
-
-1. MCMC Model Generation
-First, run the main model to generate the MCMC samples. This script utilizes the Stan code to fit the model to the data.
-
-Rscript model_mcmc_0906.R
-
-2. Model Posterior Check
-After running the model, perform a posterior check to ensure the model has converged and is a good fit for the data.
-
-Rscript modelposterior.R
-
-3. Burden Calculation
-Next, calculate the baseline and incremental burden of ESBL infections.
-
-Baseline Burden:
-
-Rscript epi_scenario0708_v2.R
-
-Incremental Burden:
-
-Rscript epi_scenario_overall_0829.R
-
-4. Sensitivity Analyses
-Finally, run the sensitivity analyses to understand the impact of different parameters on the model outputs.
-
-One-Way Sensitivity Analysis (OSA):
-First, run the analysis script:
-
-Rscript osa_epi_0724.R
-
-Then, generate the corresponding plot:
-
-Rscript fig5.R
-
-PRCC Analysis:
-Run the PRCC analysis and generate the plot:
-
-Rscript prcc_0704_v2.R
-
-Dependencies
-This analysis is conducted in R. You will need to have R installed, along with several packages. Key dependencies include:
-
-rstan
-
-ggplot2
-
-dplyr
-
-(Please add any other packages used in the scripts here)
-
-You can install the necessary packages in R using install.packages("package_name").
+Overview
+This repository contains the R and Stan code used to simulate the transmission dynamics of Extended-Spectrum Beta-Lactamase (ESBL) producing Enterobacteriaceae. The analysis is performed using a compartmental ODE model calibrated to longitudinal surveillance data.
+The repository allows reviewers to reproduce:
+Bayesian Calibration: Fitting the model to observed incidence data.
+Scenario Analysis: Estimating the burden of resistance via counterfactual simulations.
+Sensitivity Analysis: Assessing parameter uncertainty using One-Way (OWSA) and Global (PRCC) methods.
+Repository Structure
+The scripts are numbered to indicate the order of execution.
+code
+Text
+.
+├── model/
+│   └── esbl_model.stan             # Stan model file (Bayesian ODE system)
+├── scripts/
+│   ├── 01_calibration.R            # Main calibration script (runs MCMC)
+│   ├── 02_burden_analysis.R        # Counterfactual analysis (Baseline vs. No-Resistance)
+│   ├── 03_sensitivity_owsa.R       # One-Way Sensitivity Analysis (Parameter sweeps)
+│   └── 04_sensitivity_prcc.R       # Global Sensitivity Analysis (LHS-PRCC)
+├── outputs/                        # Directory for saved model objects and plots
+└── README.md                       # This file
+System Requirements
+Software
+R (v4.0.0 or higher)
+RStudio (Recommended)
+C++ Compiler (Required for rstan):
+Windows: Rtools (version matching your R installation).
+macOS: Xcode Command Line Tools.
+Linux: g++ or clang++.
+Required Packages
+Run the following R command to install the necessary dependencies:
+code
+R
+install.packages(c("deSolve", "rstan", "dplyr", "tidyr", "ggplot2", 
+                   "patchwork", "scales", "lhs", "sensitivity", 
+                   "doParallel", "foreach", "gridExtra"))
+Note: For rstan, ensure your C++ toolchain is correctly configured.
+Instructions for Reproduction
+To reproduce the model results, please execute the scripts in the following sequence. Ensure your working directory is set to the root of this repository.
+1. Model Calibration
+Script: scripts/01_calibration.R
+Action: This script compiles the Stan model, loads the surveillance data, and performs Hamiltonian Monte Carlo (HMC) sampling.
+Output:
+Saves the fitted model object (posterior samples) to outputs/fit_esbl_results.RData.
+Generates diagnostic trace plots and posterior predictive checks.
+Note: This step is computationally intensive and may take 30–60 minutes depending on hardware.
+2. Burden Estimation (Counterfactuals)
+Script: scripts/02_burden_analysis.R
+Prerequisite: Requires fit_esbl_results.RData generated in Step 1.
+Action: Simulates two parallel scenarios (Baseline vs. No-Resistance) over a 10-year horizon using the posterior parameter sets. It calculates the incremental mortality and morbidity attributable to resistance.
+Output: Generates time-series plots of averted deaths and summary statistics for hospital and community settings.
+3. One-Way Sensitivity Analysis
+Script: scripts/03_sensitivity_owsa.R
+Action: Identifies the top influential parameters via a pre-scan (Tornado method) and performs a detailed parameter sweep (+/- 50%) for the most influential parameters.
+Output: Generates spider plots showing the impact of individual parameter variations on cumulative outcomes.
+4. Global Sensitivity Analysis (LHS-PRCC)
+Script: scripts/04_sensitivity_prcc.R
+Action: Performs Latin Hypercube Sampling (LHS) to generate 1,000 parameter sets, runs parallel simulations, and calculates Partial Rank Correlation Coefficients (PRCC).
+Output: Generates a heatmap visualizing the correlation between biological parameters and key model outcomes (cumulative infections and deaths).
+Data Availability
+Surveillance Data: Aggregate incidence data used for calibration is hardcoded within 01_calibration.R to ensure immediate reproducibility. No individual patient-level data is included.
+Demographics: Parameters for birth, death, and migration rates are derived from publicly available national statistics (sources cited in the manuscript).
+Contact
+For technical queries regarding code execution, please contact:
+yewei.xie@u.duke.nus.edu

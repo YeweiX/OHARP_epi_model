@@ -68,15 +68,79 @@ if(exists("fit6")) {
 ode_model <- function(t, y, params) {
   with(as.list(c(y, params)), {
     # Populations
-    Nh <- max(1e-6, Sh + RCh + RIh + SIh)
-    Nc <- max(1e-6, Sc + RCc + RIc + SIc)
+    Nh_current <- max(1, Sh + RCh + RIh + SIh)
+    Nc_current <- max(1, Sc + RCc + RIc + SIc)
+    N_total_living <- Nh_current + Nc_current
     
-    # Hospital Flows
-    # ... (Full differential equations abbreviated for brevity, same as previous scripts)
-    # Key concept: We track cumulative deaths (Drh, Drc) to calculate incidence later
+    # Hospital flows OUT
+    flow_beta_eh_Sh       <- constrain_flow(beta_eh * Sh, Sh)
+    flow_beta_hh_Sh       <- constrain_flow(beta_hh * Sh * RCh / Nh_current, Sh)
+    flow_beta_sh_sih_Sh   <- constrain_flow(beta_sh_sih * Sh * SIh / Nh_current, Sh)
+    flow_alpha_dis_Sh     <- constrain_flow(alpha_dis * Sh, Sh)
+    flow_mu_d_Sh          <- constrain_flow(mu_d * Sh, Sh)
     
-    # Re-using the standard equations defined in previous steps...
-    # (Ensure the full ODE function from the previous response is included here in the actual run)
+    flow_delta_rch_rih_RCh <- constrain_flow(delta_rch_rih * RCh, RCh)
+    flow_gamma_rch_sh_RCh  <- constrain_flow(gamma_rch_sh * RCh, RCh)
+    flow_alpha_dis_RCh     <- constrain_flow(alpha_dis * RCh, RCh)
+    flow_delta_rch_sih_RCh <- constrain_flow(delta_rch_sih * RCh, RCh)
+    flow_mu_d_RCh          <- constrain_flow(mu_d * RCh, RCh)
+    
+    flow_gamma_rih_rch_RIh <- constrain_flow(gamma_rih_rch * RIh, RIh)
+    flow_mu_rih_RIh        <- constrain_flow(mu_rih * RIh, RIh)
+    
+    flow_gamma_sih_sh_SIh  <- constrain_flow(gamma_sih_sh * SIh, SIh)
+    flow_mu_sih_SIh        <- constrain_flow(mu_sih * SIh, SIh)
+    
+    # Community flows OUT
+    flow_beta_sc_ec_Sc    <- constrain_flow(beta_sc_ec * Sc, Sc)
+    flow_beta_sc_ac_Sc    <- constrain_flow(beta_sc_ac * Sc * 0.33, Sc)
+    flow_beta_hc_Sc       <- constrain_flow(beta_hc * Sc * RCc / Nc_current, Sc)
+    flow_beta_sc_sic_Sc   <- constrain_flow(beta_sc_sic * Sc * SIc / Nc_current, Sc)
+    flow_alpha_adm_Sc     <- constrain_flow(alpha_adm * Sc, Sc)
+    flow_mu_d_Sc          <- constrain_flow(mu_d * Sc, Sc)
+    
+    flow_delta_rcc_ric_RCc <- constrain_flow(delta_rcc_ric * RCc, RCc)
+    flow_delta_rcc_sic_RCc <- constrain_flow(delta_rcc_sic * RCc, RCc)
+    flow_gamma_rcc_sc_RCc  <- constrain_flow(gamma_rcc_sc * RCc, RCc)
+    flow_alpha_adm_RCc     <- constrain_flow(alpha_adm * RCc, RCc)
+    flow_mu_d_RCc          <- constrain_flow(mu_d * RCc, RCc)
+    
+    flow_gamma_ric_rcc_RIc <- constrain_flow(gamma_ric_rcc * RIc, RIc)
+    flow_mu_ric_RIc        <- constrain_flow(mu_ric * RIc, RIc)
+    flow_alpha_adm_RIc     <- constrain_flow(alpha_adm * RIc, RIc)
+    
+    flow_gamma_sic_sc_SIc  <- constrain_flow(gamma_sic_sc * SIc, SIc)
+    flow_mu_sic_SIc        <- constrain_flow(mu_sic * SIc, SIc)
+    flow_alpha_adm_SIc     <- constrain_flow(alpha_adm * SIc, SIc)
+    
+    # Hospital compartments
+    dSh_dt  <- -flow_beta_eh_Sh - flow_beta_hh_Sh - flow_beta_sh_sih_Sh - flow_alpha_dis_Sh - flow_mu_d_Sh +
+      flow_gamma_sih_sh_SIh + flow_gamma_rch_sh_RCh + flow_alpha_adm_Sc
+    dRCh_dt <- -flow_delta_rch_rih_RCh - flow_gamma_rch_sh_RCh - flow_alpha_dis_RCh - flow_delta_rch_sih_RCh - flow_mu_d_RCh +
+      flow_beta_eh_Sh + flow_beta_hh_Sh + flow_gamma_rih_rch_RIh + flow_alpha_adm_RCc
+    dRIh_dt <- -flow_gamma_rih_rch_RIh - flow_mu_rih_RIh + flow_delta_rch_rih_RCh + flow_alpha_adm_RIc
+    dSIh_dt <- -flow_gamma_sih_sh_SIh - flow_mu_sih_SIh + flow_beta_sh_sih_Sh + flow_delta_rch_sih_RCh + flow_alpha_adm_SIc
+    
+    # Community compartments
+    dSc_dt  <- -flow_beta_sc_ec_Sc - flow_beta_sc_ac_Sc - flow_beta_hc_Sc - flow_beta_sc_sic_Sc - flow_alpha_adm_Sc - flow_mu_d_Sc +
+      flow_gamma_sic_sc_SIc + flow_gamma_rcc_sc_RCc + flow_alpha_dis_Sh + mu_b * N_total_living + mu_m * N_total_living
+    dRCc_dt <- -flow_delta_rcc_ric_RCc - flow_delta_rcc_sic_RCc - flow_gamma_rcc_sc_RCc - flow_alpha_adm_RCc - flow_mu_d_RCc +
+      flow_beta_sc_ec_Sc + flow_beta_sc_ac_Sc + flow_beta_hc_Sc + flow_gamma_ric_rcc_RIc + flow_alpha_dis_RCh
+    dRIc_dt <- -flow_gamma_ric_rcc_RIc - flow_mu_ric_RIc - flow_alpha_adm_RIc + flow_delta_rcc_ric_RCc
+    dSIc_dt <- -flow_gamma_sic_sc_SIc - flow_mu_sic_SIc - flow_alpha_adm_SIc + flow_beta_sc_sic_Sc + flow_delta_rcc_sic_RCc
+    
+    # Cumulative deaths
+    dDrh_dt <- flow_mu_rih_RIh
+    dDsh_dt <- flow_mu_sih_SIh
+    dDrc_dt <- flow_mu_ric_RIc
+    dDsc_dt <- flow_mu_sic_SIc
+    
+    # Cumulative new cases
+    dC_RIh_dt <- flow_delta_rch_rih_RCh + flow_alpha_adm_RIc
+    dC_SIh_dt <- flow_beta_sh_sih_Sh + flow_delta_rch_sih_RCh + flow_alpha_adm_SIc
+    dC_RIc_dt <- flow_delta_rcc_ric_RCc
+    dC_SIc_dt <- flow_beta_sc_sic_Sc + flow_delta_rcc_sic_RCc
+    
     list(c(dSh, dRCh, dRIh, dSIh, dSc, dRCc, dRIc, dSIc,
            dDrh, dDsh, dDrc, dDsc, dC_RIh, dC_SIh, dC_RIc, dC_SIc))
   })

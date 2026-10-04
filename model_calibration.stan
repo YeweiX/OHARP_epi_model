@@ -178,8 +178,6 @@ parameters {
 
 
 transformed parameters {
-  real y_sim[n_days, 16];
-
   real yearly_total_RIh_incidence[n_years];
   real annual_new_total_RIh[n_years];
   real annual_new_total_SIh[n_years];
@@ -189,6 +187,11 @@ transformed parameters {
   real community_resistant_proportion[n_years];  // Changed from n_days to n_years
   real average_community_resistant_proportion;
 
+  // The full daily ODE solution is needed for the likelihood, but is not a
+  // posterior quantity needed by calibration or the downstream PSA. Keep it
+  // local so Stan does not write 3650 x 16 values for every draw.
+  {
+  real y_sim[n_days, 16];
   real theta_values[7] = {beta_eh, beta_sc_ec, beta_sc_ac, beta_hh, beta_hc, beta_sh_sih, delta_rcc_ric};
 
   y_sim = integrate_ode_bdf(sir, y0, t0, ts, theta_values, x_r, x_i);
@@ -239,11 +242,12 @@ for (year in 1:n_years) {
   
   average_total_hai_sih_ratio = mean(total_hai_sih_ratio);
   average_community_resistant_proportion = mean(community_resistant_proportion);
+  }
 }
 
 
 model {
-  beta_eh ~ beta(0.9192455, 0.2944133 );
+  beta_eh ~ beta(0.8536141, 0.3459701);
   beta_sc_ac ~ beta(0.9615812, 24.5673739);
   beta_sc_ec ~ beta(1.0997771, 0.8543970);
   beta_hh ~ uniform(0.0021, 0.0139);

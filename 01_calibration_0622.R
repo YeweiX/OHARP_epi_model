@@ -4,7 +4,7 @@
 ## Clean appendix version of 01_calibraion_0620.R.
 ##
 ## Usage:
-##   Rscript 01_calibration_0620_clean.R
+##   Rscript 01_calibration_0622.R
 ##
 ## Requirements:
 ##   - model_calibration.stan must be in the same folder as this R script.
@@ -44,6 +44,13 @@ get_script_dir <- function() {
 }
 
 script_dir <- get_script_dir()
+# File locations only; original scientific calculations are unchanged.
+oh_data_dir <- normalizePath(file.path(get_script_dir(), "..", "RData"), mustWork=TRUE)
+oh_fig_dir <- file.path(get_script_dir(), "..", "Figures")
+oh_temp_dir <- file.path(tempdir(), "oharp_analysis")
+dir.create(oh_fig_dir, recursive=TRUE, showWarnings=FALSE)
+dir.create(oh_temp_dir, recursive=TRUE, showWarnings=FALSE)
+
 stan_file <- file.path(script_dir, "model_calibration.stan")
 if (!file.exists(stan_file)) {
   stop("Cannot find model_calibration.stan in the script folder: ", script_dir)
@@ -51,7 +58,7 @@ if (!file.exists(stan_file)) {
 
 output_dir <- Sys.getenv(
   "CALIBRATION_OUTPUT_DIR",
-  unset = file.path(script_dir, "outputs_calibration_0620")
+  unset = oh_temp_dir
 )
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
@@ -239,8 +246,15 @@ cat(
   "\n"
 )
 
+prior_table <- data.frame(
+  parameter = c("beta_eh", "beta_sc_ac", "beta_sc_ec"),
+  alpha = c(0.8536141, 0.9615812, 1.0997771),
+  beta = c(0.3459701, 24.5673739, 0.8543970)
+)
+
 fit6 <- rstan::stan(
   file = stan_file,
+  sample_file = file.path(output_dir, "chain_samples.csv"),
   data = data_sir,
   iter = calibration_iter,
   chains = calibration_chains,
@@ -252,7 +266,7 @@ fit6 <- rstan::stan(
 )
 
 saveRDS(fit6, file.path(output_dir, "fit6.rds"))
-save(fit6, file = file.path(output_dir, "fit6.RData"))
+save(fit6, data_sir, prior_table, file = file.path(oh_data_dir, "fit6.RData"))
 
 ## -----------------------------------------------------------------------------
 ## 5. Diagnostics and posterior outputs
@@ -269,7 +283,7 @@ pars_calibrated <- c(
 )
 
 capture.output(
-  print(fit6, digits = 9, pars = pars_calibrated),
+  print(fit6, digits_summary = 9, pars = pars_calibrated),
   file = file.path(output_dir, "calibrated_parameter_summary.txt")
 )
 
@@ -307,7 +321,7 @@ write.csv(
 
 p_trace <- rstan::traceplot(fit6, pars = pars_calibrated)
 ggplot2::ggsave(
-  filename = file.path(output_dir, "calibrated_parameter_traceplot.png"),
+  filename = file.path(oh_fig_dir, "calibrated_parameter_traceplot.png"),
   plot = p_trace,
   width = 12,
   height = 8,
@@ -316,7 +330,7 @@ ggplot2::ggsave(
 
 p_density <- rstan::stan_dens(fit6, pars = pars_calibrated, separate_chains = TRUE)
 ggplot2::ggsave(
-  filename = file.path(output_dir, "calibrated_parameter_density.png"),
+  filename = file.path(oh_fig_dir, "calibrated_parameter_density.png"),
   plot = p_density,
   width = 12,
   height = 8,
@@ -324,7 +338,7 @@ ggplot2::ggsave(
 )
 
 ## -----------------------------------------------------------------------------
-## 6. Posterior predictive check
+## 6. Posterior latent-mean intervals (observation noise excluded)
 ## -----------------------------------------------------------------------------
 
 incidence_post <- as.matrix(fit6, pars = "pred_yearly_total_RIh_incidence")
@@ -353,14 +367,14 @@ p_ppc <- bayesplot::ppc_ribbon(
   ) +
   labs(
     x = "Year",
-    y = "Incidence per 10,000 inpatient days",
-    title = "Posterior Predictive Intervals vs Observed Incidence",
-    subtitle = "Showing 50% and 95% posterior predictive intervals"
+    y = "Incidence per 10,000 hospital risk-days",
+    title = "Posterior Mean Incidence vs Observed Incidence",
+    subtitle = "50% and 95% credible intervals for latent means; observation noise excluded"
   ) +
   theme_minimal()
 
 ggplot2::ggsave(
-  filename = file.path(output_dir, "ppc_ribbon_plot.png"),
+  filename = file.path(oh_fig_dir, "ppc_ribbon_plot.png"),
   plot = p_ppc,
   width = 10,
   height = 6,

@@ -1,3 +1,10 @@
+# File locations only; original scientific calculations are unchanged.
+oh_data_dir <- normalizePath(file.path(get_script_dir(), "..", "RData"), mustWork=TRUE)
+oh_fig_dir <- file.path(get_script_dir(), "..", "Figures")
+oh_temp_dir <- file.path(tempdir(), "oharp_analysis")
+dir.create(oh_fig_dir, recursive=TRUE, showWarnings=FALSE)
+dir.create(oh_temp_dir, recursive=TRUE, showWarnings=FALSE)
+
 # =============================================================================
 #
 # Global Sensitivity Analysis using LHS-PRCC
@@ -113,15 +120,16 @@ cat("\nGenerating parameter samples using Latin Hypercube Sampling...\n")
 
 
 #parameter distributions
+# Seven calibrated ranges updated from fit6.RData posterior extrema (v3c; 2026-10-02).
 
 epi_param_distributions <- list(
-  beta_hh       = list(dist = "unif", min = 0.002100771, max = 0.013899509),
-  beta_eh       = list(dist = "unif", min =0.000000084,  max = 0.033214594),
-  beta_hc       = list(dist = "unif", min = 0.001600901, max = 0.010231657),
-  beta_sc_ac    = list(dist = "unif", min = 0.000000096, max = 0.003083009),
-  beta_sc_ec    = list(dist = "unif", min = 0.000000037, max = 0.001111809),  # was 0 → use eps
-  beta_sh_sih   = list(dist = "unif", min = 0.155454327, max = 0.996909995),
-  delta_rcc_ric = list(dist = "unif", min =0.000031951,  max = 0.000149248),
+  beta_hh       = list(dist = "unif", min = 0.0021013149033342958, max = 0.013899194216909957),
+  beta_eh       = list(dist = "unif", min = 2.9983141736715518e-07, max = 0.026260150839663165),
+  beta_hc       = list(dist = "unif", min = 0.0016006228287477938, max = 0.010274980539048753),
+  beta_sc_ac    = list(dist = "unif", min = 1.9284199163923366e-07, max = 0.0032881602137219928),
+  beta_sc_ec    = list(dist = "unif", min = 3.9583396326872278e-07, max = 0.0012713412697081539),  # was 0 → use eps
+  beta_sh_sih   = list(dist = "unif", min = 0.15627062523761137, max = 0.9995989198431996),
+  delta_rcc_ric = list(dist = "unif", min = 2.7236314579269038e-05, max = 0.00015610035618513317),
   
   # --- For the other parameters, we use the ranges you originally defined ---
   delta_rch_rih = list(dist = "unif", min = 0.00010513, max = 0.06779661),
@@ -360,7 +368,7 @@ prcc_data_for_plot <- all_prcc_df %>%
   filter(!is.na(Parameter_Full)) %>%
   filter(is.finite(original))
 
-write.csv(prcc_data_for_plot, "prcc_results.csv", row.names = FALSE)
+write.csv(prcc_data_for_plot, file.path(oh_temp_dir,"prcc_results.csv"), row.names = FALSE)
 
 
 # --- 8. Generate PRCC Heatmap ---
@@ -403,7 +411,7 @@ prcc_heatmap_final <- ggplot(
 print(prcc_heatmap_final)
 
 ggsave(
-  filename = "prcc_heatmap.png",
+  filename = file.path(oh_fig_dir,"main_Figure3_PRCC.jpg"),
   plot = prcc_heatmap_final,
   width = 11,
   height = 8,
@@ -459,3 +467,7 @@ top_correlations <- check_monotonicity(
 
 print(round(top_correlations, 3))
 
+
+# Save the original PRCC estimates, bootstrap intervals and simulated inputs/outcomes.
+save(epi_param_distributions, param_samples, all_results, prcc_results_list,
+     all_prcc_df, top_correlations, file = file.path(oh_data_dir, "prcc_results.RData"))

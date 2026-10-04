@@ -1,3 +1,10 @@
+# File locations only; original scientific calculations are unchanged.
+oh_data_dir <- normalizePath(file.path(get_script_dir(), "..", "RData"), mustWork=TRUE)
+oh_fig_dir <- file.path(get_script_dir(), "..", "Figures")
+oh_temp_dir <- file.path(tempdir(), "oharp_analysis")
+dir.create(oh_fig_dir, recursive=TRUE, showWarnings=FALSE)
+dir.create(oh_temp_dir, recursive=TRUE, showWarnings=FALSE)
+
 # =============================================================================
 #
 # One-Way Sensitivity Analysis (OWSA) for an Epidemiological Model
@@ -23,19 +30,22 @@ library(patchwork)
 #
 # Example: source("your_model_setup_file.R")
 
+y_init <- y_init_baseline  # Initial state provided by 02_burden_analysis_0622.R.
+
 economic_horizon_years <- 10
 full_sim_years <- 20
 economic_start_year <- full_sim_years - economic_horizon_years
 
 # Define the baseline parameter values
+# Seven calibrated means updated from fit6.RData (v3c; 2026-10-02).
 baseline_epi_params <- list(
-  beta_hh =0.007893581, beta_sh_sih = 0.239527636, delta_rch_rih = 0.03395087,
+  beta_hh = 0.0078295771446740374, beta_sh_sih = 0.22946763644240969, delta_rch_rih = 0.03395087,
   mu_sih = 0.00311667, mu_rih = 0.00404500, gamma_sih_sh = 0.14285714,
   gamma_rch_sh = 0.00612032, gamma_rih_rch = 0.11111111, delta_rch_sih = 0.00084658,
-  beta_sc_sic = 0.00000792, delta_rcc_ric = 0.000085556, delta_rcc_sic = 0.00084658,
+  beta_sc_sic = 0.00000792, delta_rcc_ric = 8.5399794765483555e-05, delta_rcc_sic = 0.00084658,
   gamma_sic_sc = 0.25, gamma_rcc_sc = 0.009, gamma_ric_rcc = 0.17,
   mu_sic =  0.003226, mu_ric =  0.003629, alpha_adm = 0.000316, alpha_dis = 0.235,
-  beta_eh = 0.006259864, beta_hc = 0.003655865, beta_sc_ac =  0.000683476, beta_sc_ec = 0.000260089,
+  beta_eh = 0.0058855307110164956, beta_hc = 0.0037004465700793141, beta_sc_ac = 0.00069894020481212527, beta_sc_ec = 0.00026465053652890725,
   mu_b = 0.00002518, mu_m = 0.000002, mu_d = 0.00001353
 )
 
@@ -327,3 +337,11 @@ print(final_plot)
 
 
 
+
+# Save the original OWSA results and the plot displayed above.
+save(baseline_epi_params, baseline_outcomes, owsa_pre_scan_df, key_parameters,
+     top5_Drh, top5_Drc, top5_Cases_h, top5_Cases_c, heatmap_df, heatmap_long,
+     file = file.path(oh_data_dir, "owsa_results.RData"))
+write.csv(owsa_pre_scan_df, file.path(oh_temp_dir,"owsa_pre_scan.csv"), row.names = FALSE)
+write.csv(heatmap_df, file.path(oh_temp_dir,"owsa_results.csv"), row.names = FALSE)
+ggsave(file.path(oh_fig_dir,"main_Figure2_OWSA.png"), final_plot, width = 20, height = 13, dpi = 300)

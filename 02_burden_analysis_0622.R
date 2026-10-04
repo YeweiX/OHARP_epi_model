@@ -3,7 +3,32 @@
 # Calculating incremental burden (Baseline - No Resistance Scenario)
 # Outcomes: Annual Drh, Drc deaths and cumulative RIh, RIc cases
 # =============================================================================
-fit6_path <- "/Users/yeweixie/Library/CloudStorage/OneDrive-NationalUniversityofSingapore/Duke-NUS/fit6.rds"
+get_script_dir <- function() {
+  script_path <- tryCatch({
+    frame_files <- vapply(sys.frames(), function(frame) {
+      if (!is.null(frame$ofile)) frame$ofile else NA_character_
+    }, character(1))
+    frame_files <- frame_files[!is.na(frame_files) & nzchar(frame_files)]
+    if (length(frame_files) > 0) {
+      normalizePath(frame_files[length(frame_files)], winslash = "/", mustWork = FALSE)
+    } else {
+      NA_character_
+    }
+  }, error = function(e) NA_character_)
+  
+  if (!is.na(script_path) && nzchar(script_path)) dirname(script_path) else getwd()
+}
+
+
+# File locations only; original scientific calculations are unchanged.
+oh_data_dir <- normalizePath(file.path(get_script_dir(), "..", "RData"), mustWork=TRUE)
+oh_fig_dir <- file.path(get_script_dir(), "..", "Figures")
+oh_temp_dir <- file.path(tempdir(), "oharp_analysis")
+dir.create(oh_fig_dir, recursive=TRUE, showWarnings=FALSE)
+dir.create(oh_temp_dir, recursive=TRUE, showWarnings=FALSE)
+
+if (!interactive()) options(device=function(...) grDevices::pdf(file.path(oh_temp_dir,"Rplots.pdf"), ...))
+fit6_path <- file.path(oh_data_dir, "fit6.RData")
 
 loaded_names <- tryCatch(load(fit6_path), error = function(e) NULL)
 if (is.null(loaded_names)) {
@@ -30,21 +55,6 @@ library(rstan)
 library(doParallel)
 library(tidyr)
 
-get_script_dir <- function() {
-  script_path <- tryCatch({
-    frame_files <- vapply(sys.frames(), function(frame) {
-      if (!is.null(frame$ofile)) frame$ofile else NA_character_
-    }, character(1))
-    frame_files <- frame_files[!is.na(frame_files) & nzchar(frame_files)]
-    if (length(frame_files) > 0) {
-      normalizePath(frame_files[length(frame_files)], winslash = "/", mustWork = FALSE)
-    } else {
-      NA_character_
-    }
-  }, error = function(e) NA_character_)
-  
-  if (!is.na(script_path) && nzchar(script_path)) dirname(script_path) else getwd()
-}
 
 script_dir <- get_script_dir()
 
@@ -58,14 +68,15 @@ cat("Parallel processing enabled on", num_cores, "cores.\n")
 mcmc_param_names <- c("beta_hh", "beta_eh", "beta_hc", "beta_sc_ac", "beta_sc_ec", "beta_sh_sih", "delta_rcc_ric")
 
 # Baseline fixed parameters
+# Seven calibrated means updated from fit6.RData (v3c; 2026-10-02).
 all_model_params_list <- list(
-  beta_hh =0.007893581, beta_sh_sih = 0.239527636, delta_rch_rih = 0.03395087,
+  beta_hh = 0.0078295771446740374, beta_sh_sih = 0.22946763644240969, delta_rch_rih = 0.03395087,
   mu_sih = 0.00311667, mu_rih = 0.00404500, gamma_sih_sh = 0.14285714,
   gamma_rch_sh = 0.00612032, gamma_rih_rch = 0.11111111, delta_rch_sih = 0.00084658,
-  beta_sc_sic = 0.00000792, delta_rcc_ric = 0.000085556, delta_rcc_sic = 0.00084658,
+  beta_sc_sic = 0.00000792, delta_rcc_ric = 8.5399794765483555e-05, delta_rcc_sic = 0.00084658,
   gamma_sic_sc = 0.25, gamma_rcc_sc = 0.009, gamma_ric_rcc = 0.17,
   mu_sic =  0.003226, mu_ric =  0.003629, alpha_adm = 0.000316, alpha_dis = 0.235,
-  beta_eh = 0.006259864, beta_hc = 0.003655865, beta_sc_ac =  0.000683476, beta_sc_ec = 0.000260089,
+  beta_eh = 0.0058855307110164956, beta_hc = 0.0037004465700793141, beta_sc_ac = 0.00069894020481212527, beta_sc_ec = 0.00026465053652890725,
   mu_b = 0.00002518, mu_m = 0.000002, mu_d = 0.00001353
 )
 
@@ -97,10 +108,10 @@ cat("Shape of MCMC samples dataframe:", dim(posterior_samples_mcmc_selected), "\
 
 # Record the exact posterior samples extracted from fit6 and used downstream.
 # This does not modify the posterior; it only creates an audit trail.
-posterior_full_rds <- file.path(script_dir, "posterior_samples_extracted_from_fit6.rds")
-posterior_full_csv <- file.path(script_dir, "posterior_samples_extracted_from_fit6.csv")
-posterior_summary_csv <- file.path(script_dir, "posterior_samples_extracted_from_fit6_summary.csv")
-posterior_audit_csv <- file.path(script_dir, "posterior_samples_fit6_audit.csv")
+posterior_full_rds <- file.path(oh_temp_dir, "posterior_samples_extracted_from_fit6.rds")
+posterior_full_csv <- file.path(oh_temp_dir, "posterior_samples_extracted_from_fit6.csv")
+posterior_summary_csv <- file.path(oh_temp_dir, "posterior_samples_extracted_from_fit6_summary.csv")
+posterior_audit_csv <- file.path(oh_temp_dir, "posterior_samples_fit6_audit.csv")
 
 saveRDS(posterior_samples_mcmc_selected, posterior_full_rds)
 write.csv(posterior_samples_mcmc_selected, posterior_full_csv, row.names = FALSE)
@@ -361,9 +372,9 @@ posterior_draw_indices <- sample(
   replace = TRUE
 )
 
-posterior_index_file <- file.path(script_dir, "posterior_draw_indices_02_burden_analysis_0620_seed123.csv")
-posterior_psa_used_rds <- file.path(script_dir, "posterior_samples_used_in_psa_seed123.rds")
-posterior_psa_used_csv <- file.path(script_dir, "posterior_samples_used_in_psa_seed123.csv")
+posterior_index_file <- file.path(oh_temp_dir, "posterior_draw_indices_02_burden_analysis_0620_seed123.csv")
+posterior_psa_used_rds <- file.path(oh_temp_dir, "posterior_samples_used_in_psa_seed123.rds")
+posterior_psa_used_csv <- file.path(oh_temp_dir, "posterior_samples_used_in_psa_seed123.csv")
 
 write.csv(
   data.frame(
@@ -751,3 +762,18 @@ final_panel_plot <- (plot_overall | plot_hospital | plot_community) +
   )
 
 print(final_panel_plot)
+
+
+# Save the original analysis results and setup for inspection and sensitivity analysis.
+save(posterior_samples_mcmc_selected, posterior_draw_indices, posterior_samples_used_in_psa,
+     psa_summary_results, psa_annual_results, a_baseline_summary, annual_ri_summary,
+     burden_per_sample, final_summary_table, baseline_fixed_params, all_model_params_list,
+     y_init_baseline, y_init_no_resistance, times, full_sim_years, economic_horizon_years,
+     constrain_flow, infection_model_ode, mcmc_param_names, psa_seed, n_psa_samples,
+     n_successful, n_failed, plot_overall_burden, plot_faceted_burden, final_panel_plot,
+     file = file.path(oh_data_dir, "burden_results.RData"))
+
+# Save the original displayed figures in the shared Figures folder.
+ggsave(file.path(oh_fig_dir,"overall_burden.png"),plot_overall_burden,width=12,height=6,dpi=300)
+ggsave(file.path(oh_fig_dir,"faceted_burden.png"),plot_faceted_burden,width=12,height=6,dpi=300)
+ggsave(file.path(oh_fig_dir,"annual_burden_panel.png"),final_panel_plot,width=12,height=6,dpi=300)
